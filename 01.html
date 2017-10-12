@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+</head>
+<body>
+<canvas id="view" width="600" height="400" style="background-color:gray"></canvas>
+<div id="sx"></div>
+</body>
+<script src="js/box2d.js"></script>
+<script>
+
+    var world, ctx;
+    function init() {
+        //2维向量
+        b2Vec2 = Box2D.Common.Math.b2Vec2;
+        b2AABB = Box2D.Collision.b2AABB;
+        b2BodyDef = Box2D.Dynamics.b2BodyDef;
+        b2Body = Box2D.Dynamics.b2Body;
+        b2FixtureDef = Box2D.Dynamics.b2FixtureDef;
+        b2Fixture = Box2D.Dynamics.b2Fixture;
+        b2World = Box2D.Dynamics.b2World;
+        b2MassData = Box2D.Collision.Shapes.b2MassData;
+        b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape;
+        b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
+        b2DebugDraw = Box2D.Dynamics.b2DebugDraw;
+        b2MouseJointDef = Box2D.Dynamics.Joints.b2MouseJointDef;
+    }
+
+    function createWorld() {
+        //重力向量。向量有方向、模长；不关心位置的。
+        //向量的起点，一定是(0,0)点，我们只能设置终点
+        var gravity = new b2Vec2(0, 9.8);
+        //sleep表示是否允许body（刚体）在静止时休眠，休眠中的body不需要任何模拟，这种情况下会节省CPU资源
+        var sleep = true;
+
+        world = new b2World(gravity, sleep);
+    }
+    //创建地板
+    function createFloor() {
+        //定义floor类型，定义的是类型，而不是具体的物体
+        var bodyDef = new b2BodyDef();
+        //type通常有三种，b2_staticBody静态物体，b2_dynimacBody动态物体，b2_kinemativBody运动学物体
+        bodyDef.type = b2Body.b2_staticBody;
+        //设置物体在整个世界中的位置，这个位置是以物体的质心为准。
+        //单位都是米
+        //质心在(300,300)像素这个位置上，而不是(300,300)米，所以要除以30
+        bodyDef.position.Set(300 / 30, 300 / 30);
+        //设置用户数据。可以任意设置，这些数据可以用于游戏中的一些其他逻辑。
+        bodyDef.userData = {w: 200 / 30, h: 5 / 30};
+
+        //下面开始定义材质。材质包含物体的形状、摩擦力、弹性、密度等等。
+        //创建形状，多边形
+        var box = new b2PolygonShape();
+        //SetAsBox设置为矩形，接收半个宽度和半个高度作为参数。
+        box.SetAsBox(200 / 30, 5 / 30);
+
+        //至此，我们创建了一个bodyDef物体类型，和一个box材质
+
+        //创建floor;
+        var floor = world.CreateBody(bodyDef);
+        //赋予floor物体box材质
+        floor.CreateFixture2(box);
+    }
+
+    //创建地板
+    function createFloor2() {
+        //定义floor类型，定义的是类型，而不是具体的物体
+        var bodyDef = new b2BodyDef();
+        //type通常有三种，b2_staticBody静态物体，b2_dynimacBody动态物体，b2_kinemativBody运动学物体
+        bodyDef.type = b2Body.b2_staticBody;
+        //设置物体在整个世界中的位置，这个位置是以物体的质心为准。
+        //单位都是米
+        //质心在(300,300)像素这个位置上，而不是(300,300)米，所以要除以30
+        bodyDef.position.Set(200 / 30, 200 / 30);
+        //设置用户数据。可以任意设置，这些数据可以用于游戏中的一些其他逻辑。
+        bodyDef.userData = {w: 150 / 30, h: 5 / 30};
+
+        //下面开始定义材质。材质包含物体的形状、摩擦力、弹性、密度等等。
+        //创建形状，多边形
+        var box = new b2PolygonShape();
+        //SetAsBox设置为矩形，接收半个宽度和半个高度作为参数。
+        box.SetAsBox(150 / 30, 5 / 30);
+
+        //至此，我们创建了一个bodyDef物体类型，和一个box材质
+
+        //创建floor;
+        var floor2 = world.CreateBody(bodyDef);
+        //赋予floor物体box材质
+        floor2.CreateFixture2(box);
+    }
+
+    //创建球
+    function createBall() {
+        //定义ball类型
+        var bodyDef = new b2BodyDef();
+        //由于小球是运动物体，此时把小球定义的type设置成b2_dynamicBody，然后创建形状。
+        bodyDef.type = b2Body.b2_dynamicBody;
+        //创建形状，参数是半径
+        var ba = new b2CircleShape(20 / 30);
+        //创建材质
+        var fix = new b2FixtureDef();
+        fix.shape = ba;     //形状
+        fix.density = 0.5; //密度
+        fix.friction = 0.1; //摩擦力
+        //回弹系数，0~1之间的数。1就表示动能没有损失
+        //设置用户数据
+        fix.restitution = 0.6; 
+        //用户数据，存一下半径
+        bodyDef.userData = 20 / 30;
+
+        for (var i = 0; i < 10; i++) {
+            bodyDef.position.Set((0 + Math.random() * 600) / 30, (Math.random() * 50) / 30);
+            //创建小球
+            var ball = world.CreateBody(bodyDef);
+            //赋予材质
+            ball.CreateFixture(fix);
+        }
+    }
+    
+    //绘制
+    function initDebugDraw() {
+        //得到画布上下文
+        ctx = document.getElementById("view").getContext("2d");
+        //物理空间建立好之后，可以使用Box2D内置的debug Draw类呈现我们创建的Box2D世界
+        var debugDraw = new b2DebugDraw();
+        //设置物理空间显示在哪个canvas中
+        debugDraw.SetSprite(ctx);
+        //设置显示规模，这个参数标的意义是像素和box2D中的米的比例
+        debugDraw.SetDrawScale(30.0);
+        //这是alpha值
+        debugDraw.SetFillAlpha(0);
+        //设置划线的alpha值
+        debugDraw.SetAlpha(0);
+        //设置线的宽度
+        debugDraw.SetLineThickness(1.0);
+        //这只一些绘制的参数
+        debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit);
+        //最后，告诉世界用这个b2DebugDraw实例来绘制
+        world.SetDebugDraw(debugDraw);
+        //设置定时器，每秒60帧
+        window.setInterval(update,20);
+    }
+    //更新
+    function update() {
+        //更新物理世界。
+        //Step方法会在后台模拟一定时间内整个物理世界的变化，得到所有物体在物理空间中的最新的数据
+        //这个方法有三个参数，第一个表示需要模拟的时间段，以秒为单位
+        //第二个参数是速度迭代次数，推荐8次
+        //第三个参数是位置迭代，1次就够了
+        //后面两个参数越大模拟得越准确，但会降低运行效率
+        world.Step(0.02, 8, 1);
+        //这个方法用于把canvas清空，为具体的渲染做准备
+        world.DrawDebugData();
+        //world.ClearForces();
+        //绘制物体
+        ctx.strokeStyle = "yellow";
+        ctx.lineWidth = 4;
+
+        // 绘制的时候可以通过world.GetBodyList()得到Box2D中的所有刚体列表，然后迭代这个列表根据需要绘制物体
+        //GetBodyList()将返回刚体列表中第一个元素，然后用b.getNext()得到下一个
+        for (var b = world.GetBodyList(); b; b = b.GetNext()) {
+            //获取物体当前位置
+            var pos = b.GetPosition();
+            //获取物体附加数据
+            var uData = b.GetUserData();
+            var ang = b.GetAngle();
+
+            //如果这个物体的类型是动态类型（小球）
+            if (b.GetType() == b2Body.b2_dynamicBody && uData != null) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.translate(pos.x * 30, pos.y * 30);
+                ctx.rotate(ang);
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, uData * 30, 0, Math.PI * 2 ,true);
+                ctx.stroke();
+                ctx.restore();
+            }
+            //绘制地板，如果是静态物体（木板）
+            if (b.GetType() == b2Body.b2_staticBody && uData != null) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeRect((pos.x - uData.w) * 30, (pos.y - uData.h) * 30, uData.w * 2 * 30, uData.h * 2 * 30);
+                ctx.restore();
+            }
+        }
+    }
+    init();
+    createWorld();
+    createFloor();
+    createFloor2();
+    createBall();
+    initDebugDraw();
+</script>
+</html>
+

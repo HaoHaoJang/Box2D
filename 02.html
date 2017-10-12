@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <style type="text/css">
+        canvas{
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="600" height="400"></canvas>
+    <script type="text/javascript" src="js/box2d.js"></script>
+    <script type="text/javascript">
+        var world;  //世界
+        //==============================
+        // 得到常用东西，他们有的是构造函数，有的是一个对象
+        //==============================
+        var b2Vec2 = Box2D.Common.Math.b2Vec2;
+        var b2BodyDef = Box2D.Dynamics.b2BodyDef;
+        var b2Body = Box2D.Dynamics.b2Body;
+        var b2FixtureDef = Box2D.Dynamics.b2FixtureDef;
+        var b2Fixture = Box2D.Dynamics.b2Fixture;
+        var b2World = Box2D.Dynamics.b2World;
+        var b2DebugDraw = Box2D.Dynamics.b2DebugDraw;
+        var b2MouseJointDef = Box2D.Dynamics.Joints.b2MouseJointDef;
+        var b2AABB = Box2D.Collision.b2AABB;
+        var b2MassData = Box2D.Collision.Shapes.b2MassData;
+        var b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape;
+        var b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
+
+        //==============================
+        //            配置世界
+        //==============================
+        //重力向量
+        var gravity = new b2Vec2(0, 10);
+        //sleep表示是否允许body在静止时休眠，休眠中的body不需要任何模拟，这种情况下会节省CPU资源
+        var sleep = true;
+        //创建世界，接收两个参数，一个参数是重力向量，一个参数是布尔值表示是否可以休眠
+        world = new b2World(gravity, sleep);
+
+        //==============================
+        //             定义球
+        //==============================
+        //实例化一个刚体
+        var bodyDef1 = new b2BodyDef();
+        //定义这个刚体的类型
+        bodyDef1.type = b2Body.b2_dynamicBody;
+        //定义这个刚体的位置
+        bodyDef1.position.Set(100,100);
+
+        //创建小球，参数就是刚刚定义的刚体
+        var ball = world.CreateBody(bodyDef1);
+
+        //下面创建材质
+        var fix = new b2FixtureDef();
+        fix.density = 0.6; //密度
+        fix.friction = 0.3; //摩擦力
+        fix.shape = new b2CircleShape(20);     //形状，参数是半径
+        fix.restitution = 0.7; //回弹系数
+
+        //赋予材质
+        ball.CreateFixture(fix);
+        //==============================
+        // 定义地板
+        //==============================
+        //定义floor类型，定义的是类型，而不是具体的物体
+        var bodyDef2 = new b2BodyDef();
+        //type通常有三种，b2_staticBody静态物体，b2_dynimacBod动态物体，b2_kinemativBody运动学物体
+        bodyDef2.type = b2Body.b2_staticBody;
+        //设置物体在整个世界中的位置，这个位置是以物体的质心为准。
+        bodyDef2.position.Set(100,300);
+        //创建floor;
+        var floor = world.CreateBody(bodyDef2);
+        //下面开始定义材质。材质包含物体的形状、摩擦力、弹性、密度等等。
+        //创建形状，多边形
+        var box = new b2PolygonShape();
+        //SetAsBox接收半个宽度和半个高度作为参数。
+        box.SetAsBox(100,25);
+        //赋予floor物体box材质
+        floor.CreateFixture2(box);
+
+        //==============================
+        //           绘  制
+        //==============================
+        //得到画布上下文
+        ctx = document.getElementById("canvas").getContext("2d");
+        //物理空间建立好之后，可以使用Box2D内置的debugDraw类呈现我们创建的Box2D世界
+        var debugDraw = new b2DebugDraw();
+        //设置物理空间显示在哪个canvas中
+        debugDraw.SetSprite(ctx);
+        debugDraw.SetDrawScale(30.0);
+        //告诉世界用这个b2DebugDraw实例来绘制
+        world.SetDebugDraw(debugDraw);
+
+        setInterval(function(){
+            //后面两个参数越大模拟得越准确，但会降低运行效率
+            world.Step(1 / 50, 8, 1);
+            //这个方法用于把canvas清空，为具体的渲染做准备
+            world.DrawDebugData();
+
+            for(var b = world.GetBodyList(); b ; b = b.GetNext()){
+                //得到位置
+                var pos = b.GetPosition();
+                if (b.GetType() == b2Body.b2_dynamicBody){
+
+                    ctx.beginPath();
+                    ctx.arc(pos.x , pos.y  ,20,0,Math.PI*2,true);
+                    ctx.closePath();
+                    ctx.fillStyle = "navy";
+                    ctx.fill();
+                }
+
+                if (b.GetType() == b2Body.b2_staticBody ) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.strokeRect(pos.x - 100, pos.y - 25,200,50);
+                    ctx.restore();
+                }
+            }
+        },1);
+    </script>
+</body>
+</html>
